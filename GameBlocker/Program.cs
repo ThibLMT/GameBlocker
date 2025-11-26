@@ -6,22 +6,12 @@ namespace GameBlocker
     {
         static void Main(string[] args)
         {
-            //List all running processes
-            Process[] processList = Process.GetProcesses();
+            var manager = new ProcessManager();
 
-            List<Process> userApps = new List<Process>();
-
-            // We iterate over the array
-            foreach (Process p in processList)
+            var userApps = manager.GetUserApps();
+            foreach (var app in userApps)
             {
-                // We only print if there is a Window Title (to avoid spamming system services)
-                if (!string.IsNullOrEmpty(p.MainWindowTitle))
-                {
-                    userApps.Add(p);
-
-                    // The $ allows string interpolation (Like Go's fmt.Printf or JS template literals)
-                    Console.WriteLine($"Process: {p.ProcessName} | Title: {p.MainWindowTitle}");
-                }
+                Console.WriteLine($"Found: {app.ProcessName}");
             }
 
             Console.WriteLine("Enter process name to kill: ");
@@ -30,18 +20,9 @@ namespace GameBlocker
 
             Console.WriteLine($"You entered process : {target}");
 
-            foreach (Process process in userApps)
-            {
-                if (String.Equals(process.ProcessName, target, StringComparison.OrdinalIgnoreCase))
-                {
-                    process.Kill();
-                    process.WaitForExit();
-                }
+            manager.KillProcessByName(target);
 
-            }
-
-            // Keep the window open so you can read it (Optional in VS, but good for CLI)
-            Console.WriteLine("\nPress any key to exit...");
+            Console.WriteLine($"Attempted to kill '{target}'.");
             Console.ReadKey();
         }
     }
