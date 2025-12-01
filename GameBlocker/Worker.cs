@@ -12,14 +12,14 @@ namespace GameBlocker;
 public class Worker : BackgroundService
 {
     private readonly ILogger<Worker> _logger;
-    private readonly ProcessManager _processManager;
-    private readonly ConfigLoader _configLoader;
+    private readonly IProcessManager _processManager;
+    private readonly IConfigLoader _configLoader;
 
     // Dependency Injection happens here!
     public Worker(
         ILogger<Worker> logger,
-        ProcessManager processManager,
-        ConfigLoader configLoader)
+        IProcessManager processManager,
+        IConfigLoader configLoader)
     {
         _logger = logger;
         _processManager = processManager;
@@ -34,30 +34,33 @@ public class Worker : BackgroundService
 
         _logger.LogInformation("Worker started. Monitoring {Count} processes.", blockList.Count);
 
-        // The Main Loop
         try
         {
             while (!stoppingToken.IsCancellationRequested)
             {
-                var userApps = _processManager.GetUserApps();
-                foreach (var app in userApps)
-                {
-                    if (blockList.Contains(app.ProcessName))
-                    {
-                        _logger.LogInformation("VIOLATION DETECTED: {ProcessName}", app.ProcessName);
-                        _processManager.KillProcessByName(app.ProcessName);
-                    }
-                }
+                // We call the logic method
+                RunCycle(blockList);
 
-                // Wait for 5 seconds OR until shutdown is requested
                 await Task.Delay(5000, stoppingToken);
             }
         }
         catch (TaskCanceledException)
         {
-            // Valid way to exit
+            // Graceful shutdown
         }
 
         _logger.LogInformation("Worker is stopping.");
+    }
+    public void RunCycle(HashSet<string> blockList)
+    {
+        var userApps = _processManager.GetUserApps();
+        foreach (var app in userApps)
+        {
+            if (blockList.Contains(app.ProcessName))
+            {
+                _logger.LogInformation("VIOLATION DETECTED: {ProcessName}", app.ProcessName);
+                _processManager.KillProcessByName(app.ProcessName);
+            }
+        }
     }
 }

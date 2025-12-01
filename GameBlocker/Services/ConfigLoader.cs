@@ -8,7 +8,7 @@ using System.Text.Json;
 
 namespace GameBlocker.Services;
 
-public class ConfigLoader
+public class ConfigLoader : IConfigLoader
 {
     private readonly ILogger<ConfigLoader> _logger;
 

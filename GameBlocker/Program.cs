@@ -12,8 +12,8 @@ IHost host = Host.CreateDefaultBuilder(args)
 
         // 2. Register your classes as "Singletons"
         // (Created once, lived forever)
-        services.AddSingleton<ProcessManager>();
-        services.AddSingleton<ConfigLoader>();
+        services.AddSingleton<IProcessManager , ProcessManager>();
+        services.AddSingleton<IConfigLoader, ConfigLoader>();
     })
     .Build();
 

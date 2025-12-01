@@ -6,7 +6,7 @@ using System.Text;
 
 namespace GameBlocker.Services;
 
-public class ProcessManager
+public class ProcessManager : IProcessManager
 {
     // Field to hold the logger
     private readonly ILogger<ProcessManager> _logger;
@@ -17,12 +17,12 @@ public class ProcessManager
         _logger = logger;
     }
 
-    public List<Process> GetUserApps()
+    public List<ProcessInfo> GetUserApps()
     {
         //List all running processes
         Process[] processList = Process.GetProcesses();
 
-        List<Process> userApps = new List<Process>();
+        List<ProcessInfo> userApps = new List<ProcessInfo>();
 
         // We iterate over the array
         foreach (Process p in processList)
@@ -30,7 +30,11 @@ public class ProcessManager
             // We only print if there is a Window Title (to avoid spamming system services)
             if (!string.IsNullOrEmpty(p.MainWindowTitle))
             {
-                userApps.Add(p);
+                userApps.Add(new ProcessInfo
+                {
+                    ProcessName = p.ProcessName,
+                    Id = p.Id
+                });
 
             }
         }

@@ -3,5 +3,6 @@
     <File Path=".gitignore" />
     <File Path="README.md" />
   </Folder>
+  <Project Path="GameBlocker.Tests/GameBlocker.Tests.csproj" />
   <Project Path="GameBlocker/GameBlocker.csproj" />
 </Solution>
