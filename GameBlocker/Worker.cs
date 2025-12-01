@@ -44,10 +44,10 @@ public class Worker : BackgroundService
             var config = _configMonitor.CurrentValue;
 
             // 🔍 DEBUGGING: Print the state every loop
-            _logger.LogInformation("DEBUG CHECK: IsEnabled={Enabled}, Count={Count}, FirstItem={First}",
+            /*_logger.LogInformation("DEBUG CHECK: IsEnabled={Enabled}, Count={Count}, FirstItem={First}",
                 config.IsEnabled,
                 config.BlockedProcesses?.Count ?? -1,
-                config.BlockedProcesses?.FirstOrDefault() ?? "NULL");
+                config.BlockedProcesses?.FirstOrDefault() ?? "NULL");*/
 
             if (!config.IsEnabled)
             {
