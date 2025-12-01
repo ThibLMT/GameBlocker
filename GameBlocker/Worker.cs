@@ -2,6 +2,7 @@
 using GameBlocker.Services;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -13,24 +14,23 @@ public class Worker : BackgroundService
 {
     private readonly ILogger<Worker> _logger;
     private readonly IProcessManager _processManager;
-    private readonly IConfigLoader _configLoader;
+    private readonly AppConfig _config;
 
     // Dependency Injection happens here!
     public Worker(
         ILogger<Worker> logger,
         IProcessManager processManager,
-        IConfigLoader configLoader)
+        IOptions<AppConfig> configOptions)
     {
         _logger = logger;
         _processManager = processManager;
-        _configLoader = configLoader;
+        _config = configOptions.Value;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         // Setup Phase
-        AppConfig config = _configLoader.LoadConfig("config.json");
-        var blockList = new HashSet<string>(config.BlockedProcesses, StringComparer.OrdinalIgnoreCase);
+        var blockList = new HashSet<string>(_config.BlockedProcesses, StringComparer.OrdinalIgnoreCase);
 
         _logger.LogInformation("Worker started. Monitoring {Count} processes.", blockList.Count);
 
