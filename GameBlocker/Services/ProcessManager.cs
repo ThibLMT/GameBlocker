@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
@@ -7,6 +8,15 @@ namespace GameBlocker.Services;
 
 public class ProcessManager
 {
+    // Field to hold the logger
+    private readonly ILogger<ProcessManager> _logger;
+
+    // Constructor
+    public ProcessManager(ILogger<ProcessManager> logger)
+    {
+        _logger = logger;
+    }
+
     public List<Process> GetUserApps()
     {
         //List all running processes
@@ -28,16 +38,25 @@ public class ProcessManager
         return userApps;
     }
 
-    public void KillProcessByName (string targetName)
+    public void KillProcessByName(string targetName)
     {
-        foreach (Process process in GetUserApps())
-        {
-            if (String.Equals(process.ProcessName, targetName, StringComparison.OrdinalIgnoreCase))
-            {
-                process.Kill();
-                process.WaitForExit();
-            }
+        // We look for the process again to be sure we have the latest handle
+        var processes = Process.GetProcessesByName(targetName);
 
+        foreach (var p in processes)
+        {
+            try
+            {
+                // LOGGING: Replaces Console.WriteLine
+                _logger.LogWarning("Killing prohibited process: {ProcessName} (ID: {Pid})", targetName, p.Id);
+
+                p.Kill();
+                p.WaitForExit();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to kill process {ProcessName}", targetName);
+            }
         }
     }
 }
