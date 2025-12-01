@@ -7,7 +7,8 @@ namespace GameBlocker.Models;
 
 public class AppConfig
 {
-    [JsonPropertyName("BlockedProcesses")]
-    public List<string> BlockedProcesses { get; set; }
+    public bool IsEnabled { get; set; } = true;
+
+    public List<string> BlockedProcesses { get; set; } = new();
 
 }

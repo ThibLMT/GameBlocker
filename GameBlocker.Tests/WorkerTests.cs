@@ -1,7 +1,7 @@
 ﻿using GameBlocker.Models;
 using GameBlocker.Services;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options; // REQUIRED for Options.Create
+using Microsoft.Extensions.Options;
 using Moq;
 using System.Collections.Generic;
 using Xunit;
@@ -17,16 +17,16 @@ public class WorkerTests
         var mockLogger = new Mock<ILogger<Worker>>();
         var mockProcManager = new Mock<IProcessManager>();
 
-        // --- CHANGED: Setup Config using Options.Create ---
-        // We don't mock the loader anymore. We just create the data.
-        var myConfig = new AppConfig
+        // --- FIXED: Setup Monitor instead of Options ---
+        var testConfig = new AppConfig
         {
+            IsEnabled = true,
             BlockedProcesses = new List<string> { "bf6" }
         };
 
-        // Wrap it in the IOptions container
-        IOptions<AppConfig> configOptions = Options.Create(myConfig);
-        // --------------------------------------------------
+        var mockMonitor = new Mock<IOptionsMonitor<AppConfig>>();
+        mockMonitor.Setup(m => m.CurrentValue).Returns(testConfig);
+        // -----------------------------------------------
 
         var fakeRunningApps = new List<ProcessInfo>
         {
@@ -38,12 +38,10 @@ public class WorkerTests
             .Setup(pm => pm.GetUserApps())
             .Returns(fakeRunningApps);
 
-        // --- CHANGED: Pass configOptions instead of mockConfigLoader ---
-        var worker = new Worker(mockLogger.Object, mockProcManager.Object, configOptions);
+        var worker = new Worker(mockLogger.Object, mockProcManager.Object, mockMonitor.Object);
 
-        // Define our blocklist (The worker extracts this from config internally now, 
-        // but RunCycle accepts it as a param for easier testing of logic)
-        var blockList = new HashSet<string>(myConfig.BlockedProcesses);
+        // We manually create the blocklist for RunCycle to test the killing logic
+        var blockList = new HashSet<string>(testConfig.BlockedProcesses);
 
         // 2. ACT
         worker.RunCycle(blockList);
@@ -67,13 +65,13 @@ public class WorkerTests
                 new ProcessInfo { ProcessName = runningApp, Id = 1 }
             });
 
-        // --- CHANGED: Create dummy options ---
-        var dummyConfig = Options.Create(new AppConfig());
+        var mockMonitor = new Mock<IOptionsMonitor<AppConfig>>();
+        mockMonitor.Setup(m => m.CurrentValue).Returns(new AppConfig()); // Return empty config
 
         var worker = new Worker(
             new Mock<ILogger<Worker>>().Object,
             mockProcManager.Object,
-            dummyConfig // Pass the dummy
+            mockMonitor.Object // Pass the mock object
         );
 
         var blockList = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase) { blockedApp };

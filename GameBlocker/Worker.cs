@@ -14,42 +14,54 @@ public class Worker : BackgroundService
 {
     private readonly ILogger<Worker> _logger;
     private readonly IProcessManager _processManager;
-    private readonly AppConfig _config;
+
+
+    private readonly IOptionsMonitor<AppConfig> _configMonitor;
 
     // Dependency Injection happens here!
     public Worker(
         ILogger<Worker> logger,
         IProcessManager processManager,
-        IOptions<AppConfig> configOptions)
+         IOptionsMonitor<AppConfig> configMonitor)
     {
         _logger = logger;
         _processManager = processManager;
-        _config = configOptions.Value;
+        _configMonitor = configMonitor;
+
+        // Log when config changes just in case :)
+        _configMonitor.OnChange(newConfig => {
+            _logger.LogInformation("Configuration changed! Enabled: {Enabled}, Blocklist: {Count}",
+                newConfig.IsEnabled, newConfig.BlockedProcesses.Count);
+        });
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        // Setup Phase
-        var blockList = new HashSet<string>(_config.BlockedProcesses, StringComparer.OrdinalIgnoreCase);
+        _logger.LogInformation("Worker started.");
 
-        _logger.LogInformation("Worker started. Monitoring {Count} processes.", blockList.Count);
-
-        try
+        while (!stoppingToken.IsCancellationRequested)
         {
-            while (!stoppingToken.IsCancellationRequested)
+            var config = _configMonitor.CurrentValue;
+
+            // 🔍 DEBUGGING: Print the state every loop
+            _logger.LogInformation("DEBUG CHECK: IsEnabled={Enabled}, Count={Count}, FirstItem={First}",
+                config.IsEnabled,
+                config.BlockedProcesses?.Count ?? -1,
+                config.BlockedProcesses?.FirstOrDefault() ?? "NULL");
+
+            if (!config.IsEnabled)
             {
-                // We call the logic method
-                RunCycle(blockList);
-
+                _logger.LogInformation("Service disabled by config.");
                 await Task.Delay(5000, stoppingToken);
+                continue;
             }
-        }
-        catch (TaskCanceledException)
-        {
-            // Graceful shutdown
-        }
 
-        _logger.LogInformation("Worker is stopping.");
+            var blockList = new HashSet<string>(config.BlockedProcesses ?? new List<string>(), StringComparer.OrdinalIgnoreCase);
+
+            RunCycle(blockList);
+
+            await Task.Delay(5000, stoppingToken);
+        }
     }
     public void RunCycle(HashSet<string> blockList)
     {

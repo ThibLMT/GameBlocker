@@ -27,16 +27,13 @@ public class ProcessManager : IProcessManager
         // We iterate over the array
         foreach (Process p in processList)
         {
-            // We only print if there is a Window Title (to avoid spamming system services)
-            if (!string.IsNullOrEmpty(p.MainWindowTitle))
-            {
-                userApps.Add(new ProcessInfo
-                {
-                    ProcessName = p.ProcessName,
-                    Id = p.Id
-                });
 
-            }
+            userApps.Add(new ProcessInfo
+            {
+                ProcessName = p.ProcessName,
+                Id = p.Id
+            });
+
         }
 
         return userApps;
