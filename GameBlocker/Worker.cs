@@ -15,6 +15,8 @@ public class Worker : BackgroundService
     private readonly ILogger<Worker> _logger;
     private readonly IProcessManager _processManager;
 
+    private readonly GameStateService _state;
+
 
     private readonly IOptionsMonitor<AppConfig> _configMonitor;
 
@@ -22,17 +24,21 @@ public class Worker : BackgroundService
     public Worker(
         ILogger<Worker> logger,
         IProcessManager processManager,
-         IOptionsMonitor<AppConfig> configMonitor)
+         IOptionsMonitor<AppConfig> configMonitor,
+         GameStateService state)
     {
         _logger = logger;
         _processManager = processManager;
         _configMonitor = configMonitor;
+        _state = state;
 
         // Log when config changes just in case :)
-        _configMonitor.OnChange(newConfig => {
+        _configMonitor.OnChange(newConfig =>
+        {
             _logger.LogInformation("Configuration changed! Enabled: {Enabled}, Blocklist: {Count}",
                 newConfig.IsEnabled, newConfig.BlockedProcesses.Count);
         });
+       
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -49,10 +55,9 @@ public class Worker : BackgroundService
                 config.BlockedProcesses?.Count ?? -1,
                 config.BlockedProcesses?.FirstOrDefault() ?? "NULL");*/
 
-            if (!config.IsEnabled)
+            if (!_state.IsEnabled)
             {
-                _logger.LogInformation("Service disabled by config.");
-                await Task.Delay(5000, stoppingToken);
+                await Task.Delay(2000, stoppingToken);
                 continue;
             }
 
@@ -72,6 +77,8 @@ public class Worker : BackgroundService
             {
                 _logger.LogInformation("VIOLATION DETECTED: {ProcessName}", app.ProcessName);
                 _processManager.KillProcessByName(app.ProcessName);
+                _state.IncrementKillCount();
+                _state.AddLog($"Killed {app.ProcessName}");
             }
         }
     }

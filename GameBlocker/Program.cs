@@ -30,6 +30,7 @@ try
     builder.Services.Configure<AppConfig>(builder.Configuration.GetSection("GameBlocker"));
     builder.Services.AddHostedService<Worker>(); // Background Loop
     builder.Services.AddSingleton<IProcessManager, ProcessManager>();
+    builder.Services.AddSingleton<GameStateService>();
 
     // 4. CORS (Allow React to talk to us)
     builder.Services.AddCors(options =>
@@ -46,22 +47,24 @@ try
     // 5. API Endpoints
 
     // GET /api/status
-    app.MapGet("/api/status", (IOptionsMonitor<AppConfig> config) =>
+    app.MapGet("/api/status", (GameStateService state) =>
     {
         return Results.Ok(new
         {
-            isEnabled = config.CurrentValue.IsEnabled,
-            blockedCount = config.CurrentValue.BlockedProcesses.Count
+            isEnabled = state.IsEnabled,
+            killCount = state.KillCount,
+            recentLogs = state.GetRecentLogs()
         });
     });
 
-    // POST /api/toggle (Simulated for now)
-    // To do this for real, we'd need to write back to appsettings.json,
-    // or use a Database/Singleton State.
-    app.MapPost("/api/toggle", () =>
+    // POST /api/toggle
+    app.MapPost("/api/toggle", (GameStateService state) =>
     {
-        // TODO: Ticket #16 - Implement State persistence
-        return Results.Ok(new { message = "Toggle command received" });
+        state.IsEnabled = !state.IsEnabled;
+
+        state.AddLog($"Service toggled to {state.IsEnabled} via Dashboard");
+
+        return Results.Ok(new { message = "State updated", newState = state.IsEnabled });
     });
 
     // 6. Run on Port 5000
