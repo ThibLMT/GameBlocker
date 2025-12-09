@@ -42,6 +42,7 @@ try
     });
 
     var app = builder.Build();
+    app.UseFileServer();
     app.UseCors("AllowReact");
 
     // 5. API Endpoints

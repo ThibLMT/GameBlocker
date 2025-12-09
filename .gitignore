@@ -480,3 +480,6 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# wwwroot folder is the space where we put the npm run build result
+wwwroot/
