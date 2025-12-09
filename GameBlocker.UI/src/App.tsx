@@ -2,6 +2,7 @@
 // 'useState' is the Hook for local state (like 'let count = 0' in Svelte)
 // 'useEffect' is for side-effects (like 'onMount' in Svelte)
 import { useState, useEffect } from 'react'
+import {getStatus, toggleService} from "./api.ts";
 
 // TypeScript Interface (like a Go struct for JSON)
 interface LogEntry {
@@ -14,44 +15,35 @@ function App() {
     // 2. State Definitions
     // Syntax: const [variable, setter] = useState(default);
     const [isEnabled, setIsEnabled] = useState<boolean>(true);
-    const [killCount, setKillCount] = useState<number>(0);
+    const [killCount] = useState<number>(0);
     const [logs, setLogs] = useState<LogEntry[]>([]);
-    const [newProcess, setNewProcess] = useState<string>(""); // Input binding
 
-    // 3. Mock Data Loading (Simulating an API call)
+    // 3. Data Loading
     // useEffect(fn, []) -> Runs ONCE when component mounts
     useEffect(() => {
-        // Add a fake log entry
-        setLogs([
-            { id: 1, message: "System initialized", timestamp: new Date().toLocaleTimeString() },
-            { id: 2, message: "Monitoring bf6...", timestamp: new Date().toLocaleTimeString() }
-        ]);
+        const fetchStatus = async () => {
+            const data = await getStatus();
+            setIsEnabled(data.isEnabled);
+            setLogs(data.recentLogs);
+        };
+        fetchStatus();
+
+        // Set interval (poll every 2 seconds)
+        const intervalId = setInterval(fetchStatus, 2000);
+
+        // Cleanup: Stop polling when component unmounts
+        return () => clearInterval(intervalId);
     }, []);
 
-    // 4. Event Handlers
-    const toggleService = () => {
-        // In React, you use the setter, you don't do isEnabled = !isEnabled
-        setIsEnabled(prev => !prev);
 
-        // Optimistic UI update (simulate log)
-        const action = !isEnabled ? "Resumed" : "Paused";
-        addLog(`Service ${action} by user`);
-    };
+    const handleToggle = async () => {
+        // Optimistic Update (Make UI feel fast)
+        setIsEnabled(!isEnabled);
 
-    const handleSimulateKill = () => {
-        setKillCount(c => c + 1);
-        addLog("VIOLATION: Killed 'notepad.exe'");
-    };
+        // Call API
+        await toggleService();
 
-    const addLog = (msg: string) => {
-        const newLog: LogEntry = {
-            id: Date.now(),
-            message: msg,
-            timestamp: new Date().toLocaleTimeString()
-        };
-        // Spread operator (...) to append to array.
-        // Like Go: logs = append([]LogEntry{newLog}, logs...)
-        setLogs(prevLogs => [newLog, ...prevLogs]);
+        // Note: The next polling cycle will confirm the true state
     };
 
     // 5. Rendering (JSX)
@@ -85,7 +77,7 @@ function App() {
                         <h2 className="text-xl font-bold mb-4 text-gray-200">Control Panel</h2>
                         <div className="space-y-4">
                             <button
-                                onClick={toggleService}
+                                onClick={handleToggle}
                                 className={`w-full py-4 rounded-lg font-bold text-lg transition-all transform hover:scale-[1.02] active:scale-[0.98] ${
                                     isEnabled
                                         ? 'bg-gradient-to-r from-red-500 to-red-600 shadow-red-900/20 shadow-lg'
@@ -94,15 +86,6 @@ function App() {
                             >
                                 {isEnabled ? '🛑 STOP MONITORING' : '▶ START MONITORING'}
                             </button>
-
-                            <div className="flex gap-2">
-                                <button
-                                    onClick={handleSimulateKill}
-                                    className="flex-1 bg-gray-700 hover:bg-gray-600 py-2 rounded-lg text-sm border border-gray-600 transition-colors"
-                                >
-                                    🔫 Simulate Kill
-                                </button>
-                            </div>
                         </div>
                     </div>
 
@@ -126,7 +109,7 @@ function App() {
                         {logs.length === 0 && <div className="text-gray-600 text-center italic mt-10">No activity recorded.</div>}
 
                         {/* React Loop: .map() instead of {#each} */}
-                        {logs.map((log) => (
+                        {logs.slice().reverse().map((log) => (
                             <div key={log.id} className="flex gap-3 border-l-2 border-transparent hover:border-blue-500 pl-2 transition-all">
                                 <span className="text-gray-500">[{log.timestamp}]</span>
                                 <span className={log.message.includes("VIOLATION") ? "text-red-400" : "text-gray-300"}>
