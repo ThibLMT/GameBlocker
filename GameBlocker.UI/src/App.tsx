@@ -127,7 +127,7 @@ function App() {
 
                         {/* React Loop: .map() instead of {#each} */}
                         {logs.map((log) => (
-                            <div key={log.id} className="flex gap-3 animate-in fade-in slide-in-from-left-2 duration-300">
+                            <div key={log.id} className="flex gap-3 border-l-2 border-transparent hover:border-blue-500 pl-2 transition-all">
                                 <span className="text-gray-500">[{log.timestamp}]</span>
                                 <span className={log.message.includes("VIOLATION") ? "text-red-400" : "text-gray-300"}>
                   {log.message}
