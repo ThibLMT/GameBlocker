@@ -1,40 +1,71 @@
-﻿using Serilog;
-using GameBlocker;
+﻿using GameBlocker;
 using GameBlocker.Models;
 using GameBlocker.Services;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
+using Serilog;
 
+// 1. Setup Logging
 Log.Logger = new LoggerConfiguration()
+    .WriteTo.Console()
     .WriteTo.File("C:\\ProgramData\\GameBlocker\\log.txt", rollingInterval: RollingInterval.Day)
     .CreateLogger();
 
+var options = new WebApplicationOptions
+{
+    Args = args,
+    ContentRootPath = AppContext.BaseDirectory
+};
 
 try
 {
-    // This sets up the Generic Host (Logging, DI, Config)
-    IHost host = Host.CreateDefaultBuilder(args)
-    .UseWindowsService()
-    .UseContentRoot(AppContext.BaseDirectory)
-    .UseSerilog()
-    .ConfigureAppConfiguration((context, config) =>
+    var builder = WebApplication.CreateBuilder(options);
+
+    // 2. Configure Windows Service + Base Path
+    builder.Host.UseWindowsService();
+    builder.Host.UseSerilog();
+
+    // 3. Register Services
+    builder.Services.Configure<AppConfig>(builder.Configuration.GetSection("GameBlocker"));
+    builder.Services.AddHostedService<Worker>(); // Background Loop
+    builder.Services.AddSingleton<IProcessManager, ProcessManager>();
+
+    // 4. CORS (Allow React to talk to us)
+    builder.Services.AddCors(options =>
     {
-        // Force reloadOnChange: true
-        config.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
-    })
-    .ConfigureServices((hostContext, services) =>
+        options.AddPolicy("AllowReact", policy =>
+            policy.WithOrigins("http://localhost:5173") // React Dev Server Port
+                  .AllowAnyMethod()
+                  .AllowAnyHeader());
+    });
+
+    var app = builder.Build();
+    app.UseCors("AllowReact");
+
+    // 5. API Endpoints
+
+    // GET /api/status
+    app.MapGet("/api/status", (IOptionsMonitor<AppConfig> config) =>
     {
-        services.Configure<AppConfig>(hostContext.Configuration.GetSection("GameBlocker"));
+        return Results.Ok(new
+        {
+            isEnabled = config.CurrentValue.IsEnabled,
+            blockedCount = config.CurrentValue.BlockedProcesses.Count
+        });
+    });
 
-        services.AddHostedService<Worker>();
-        services.AddSingleton<IProcessManager, ProcessManager>();
+    // POST /api/toggle (Simulated for now)
+    // To do this for real, we'd need to write back to appsettings.json,
+    // or use a Database/Singleton State.
+    app.MapPost("/api/toggle", () =>
+    {
+        // TODO: Ticket #16 - Implement State persistence
+        return Results.Ok(new { message = "Toggle command received" });
+    });
 
-    })
-    .Build();
-
-    // This runs the app and waits for Ctrl+C
-    await host.RunAsync();
+    // 6. Run on Port 5000
+    app.Run("http://localhost:5000");
 }
 catch (Exception ex)
 {
