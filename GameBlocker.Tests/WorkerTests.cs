@@ -16,6 +16,7 @@ public class WorkerTests
         // 1. ARRANGE
         var mockLogger = new Mock<ILogger<Worker>>();
         var mockProcManager = new Mock<IProcessManager>();
+        var gameState = new GameStateService();
 
         // --- FIXED: Setup Monitor instead of Options ---
         var testConfig = new AppConfig
@@ -38,7 +39,7 @@ public class WorkerTests
             .Setup(pm => pm.GetUserApps())
             .Returns(fakeRunningApps);
 
-        var worker = new Worker(mockLogger.Object, mockProcManager.Object, mockMonitor.Object);
+        var worker = new Worker(mockLogger.Object, mockProcManager.Object, mockMonitor.Object, gameState);
 
         // We manually create the blocklist for RunCycle to test the killing logic
         var blockList = new HashSet<string>(testConfig.BlockedProcesses);
@@ -59,6 +60,7 @@ public class WorkerTests
     {
         // 1. ARRANGE
         var mockProcManager = new Mock<IProcessManager>();
+        var gameState = new GameStateService();
 
         mockProcManager.Setup(pm => pm.GetUserApps())
             .Returns(new List<ProcessInfo> {
@@ -71,7 +73,8 @@ public class WorkerTests
         var worker = new Worker(
             new Mock<ILogger<Worker>>().Object,
             mockProcManager.Object,
-            mockMonitor.Object // Pass the mock object
+            mockMonitor.Object,
+            gameState
         );
 
         var blockList = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase) { blockedApp };
