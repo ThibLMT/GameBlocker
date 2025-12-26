@@ -16,7 +16,9 @@ namespace GameBlocker.Tests
 
             var Scanner = new GameScannerService(mockLogger.Object);
 
-            var exeFilesReturned = Scanner.ScanGames();
+            string gamesDirectory = @"A:\Games";
+
+            var exeFilesReturned = Scanner.ScanGames(gamesDirectory);
 
             //Should not return empty files
             Assert.NotNull(exeFilesReturned);

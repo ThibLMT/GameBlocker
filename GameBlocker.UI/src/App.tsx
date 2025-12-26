@@ -3,6 +3,7 @@
 // 'useEffect' is for side-effects (like 'onMount' in Svelte)
 import { useState, useEffect } from 'react'
 import {getStatus, toggleService} from "./api.ts";
+import Scanner from './Scanner'
 
 // TypeScript Interface (like a Go struct for JSON)
 interface LogEntry {
@@ -17,6 +18,7 @@ function App() {
     const [isEnabled, setIsEnabled] = useState<boolean>(true);
     const [killCount] = useState<number>(0);
     const [logs, setLogs] = useState<LogEntry[]>([]);
+    const [isScannerOpen, setIsScannerOpen] = useState<boolean>(false);
 
     // 3. Data Loading
     // useEffect(fn, []) -> Runs ONCE when component mounts
@@ -57,7 +59,7 @@ function App() {
                 {/* HEADER */}
                 <header className="flex items-center justify-between border-b border-gray-700 pb-6">
                     <div>
-                        <h1 className="text-4xl font-extrabold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
+                        <h1 className="text-4xl font-extrabold bg-linear-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
                             GameBlocker
                         </h1>
                         <p className="text-gray-400 mt-1">Daemon Status: <span className="text-mono">v1.0.0</span></p>
@@ -80,11 +82,19 @@ function App() {
                                 onClick={handleToggle}
                                 className={`w-full py-4 rounded-lg font-bold text-lg transition-all transform hover:scale-[1.02] active:scale-[0.98] ${
                                     isEnabled
-                                        ? 'bg-gradient-to-r from-red-500 to-red-600 shadow-red-900/20 shadow-lg'
-                                        : 'bg-gradient-to-r from-green-500 to-green-600 shadow-green-900/20 shadow-lg'
+                                        ? 'bg-linear-to-r from-red-500 to-red-600 shadow-red-900/20 shadow-lg'
+                                        : 'bg-linear-to-r from-green-500 to-green-600 shadow-green-900/20 shadow-lg'
                                 }`}
                             >
                                 {isEnabled ? '🛑 STOP MONITORING' : '▶ START MONITORING'}
+                            </button>
+                        </div>
+                        <div className="mt-4">
+                            <button
+                                onClick={() => setIsScannerOpen(true)}
+                                className="w-full py-3 rounded-lg font-bold text-gray-300 bg-gray-700 border border-gray-600 hover:bg-gray-600 hover:text-white transition-all flex items-center justify-center gap-2"
+                            >
+                                ➕ Add Game Folder
                             </button>
                         </div>
                     </div>
@@ -119,6 +129,11 @@ function App() {
                         ))}
                     </div>
                 </div>
+
+                <Scanner
+                    isOpen={isScannerOpen}
+                    onClose={() => setIsScannerOpen(false)}
+                />
 
             </div>
         </div>

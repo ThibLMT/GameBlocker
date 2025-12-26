@@ -6,7 +6,6 @@ namespace GameBlocker.Services
 {
     public class GameScannerService
     {
-        public string gamesDirectory = @"A:\Games";
 
         // Field to hold the logger
         private readonly ILogger<GameScannerService> _logger;
@@ -17,7 +16,7 @@ namespace GameBlocker.Services
             _logger = logger;
         }
 
-        public Dictionary<string,List<String>> ScanGames()
+        public Dictionary<string, List<String>> ScanGames(string gamesDirectory)
         {
             try
             {
@@ -37,11 +36,13 @@ namespace GameBlocker.Services
                         // A:\Games\steamapps\common\Battlefield 6 -> Game Name is "Battlefield 6"
                         gameName = parts[2];
                     }
-                    var folderName = relative.Split(Path.DirectorySeparatorChar)[0];
-                    return folderName;
+                    return gameName;
                 });
 
-                return null;
+                return groups.OrderBy(group => group.Key).ToDictionary(
+                    group => group.Key,
+                    group => group.ToList()
+                );
             }
             catch (global::System.Exception e)
             {

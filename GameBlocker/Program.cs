@@ -31,6 +31,7 @@ try
     builder.Services.AddHostedService<Worker>(); // Background Loop
     builder.Services.AddSingleton<IProcessManager, ProcessManager>();
     builder.Services.AddSingleton<GameStateService>();
+    builder.Services.AddTransient<GameScannerService>();
 
     // 4. CORS (Allow React to talk to us)
     builder.Services.AddCors(options =>
@@ -66,6 +67,23 @@ try
         state.AddLog($"Service toggled to {state.IsEnabled} via Dashboard");
 
         return Results.Ok(new { message = "State updated", newState = state.IsEnabled });
+    });
+
+    // GET /api/scan
+    app.MapPost("/api/scan", (string path, GameScannerService scannerService) =>
+    {
+        if (string.IsNullOrEmpty(path))
+        {
+            return Results.BadRequest(error: new { error = "Path cannot be empty" });
+        }
+        var rawDict = scannerService.ScanGames(path);
+
+        var response = rawDict.Select(kvp => new GameScanResult
+        {
+            Name = kvp.Key,
+            Exes = kvp.Value
+        }).ToList();
+        return Results.Ok(response);
     });
 
     // 6. Run on Port 5000
