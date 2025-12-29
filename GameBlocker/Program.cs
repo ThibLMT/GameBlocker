@@ -28,9 +28,11 @@ try
 
     // 3. Register Services
     builder.Services.Configure<AppConfig>(builder.Configuration.GetSection("GameBlocker"));
+    builder.Services.Configure<ScannerConfig>(builder.Configuration.GetSection("Scanner"));
     builder.Services.AddHostedService<Worker>(); // Background Loop
     builder.Services.AddSingleton<IProcessManager, ProcessManager>();
     builder.Services.AddSingleton<GameStateService>();
+    builder.Services.AddSingleton<UserRulesService>();
     builder.Services.AddTransient<GameScannerService>();
 
     // 4. CORS (Allow React to talk to us)

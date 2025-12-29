@@ -16,6 +16,7 @@ public class Worker : BackgroundService
     private readonly IProcessManager _processManager;
 
     private readonly GameStateService _state;
+    private readonly UserRulesService _userRulesService;
 
 
     private readonly IOptionsMonitor<AppConfig> _configMonitor;
@@ -25,7 +26,8 @@ public class Worker : BackgroundService
         ILogger<Worker> logger,
         IProcessManager processManager,
          IOptionsMonitor<AppConfig> configMonitor,
-         GameStateService state)
+         GameStateService state,
+         UserRulesService userRulesService)
     {
         _logger = logger;
         _processManager = processManager;
@@ -38,7 +40,7 @@ public class Worker : BackgroundService
             _logger.LogInformation("Configuration changed! Enabled: {Enabled}, Blocklist: {Count}",
                 newConfig.IsEnabled, newConfig.BlockedProcesses.Count);
         });
-       
+        _userRulesService = userRulesService;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
