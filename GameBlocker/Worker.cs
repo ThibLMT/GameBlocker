@@ -37,8 +37,8 @@ public class Worker : BackgroundService
         // Log when config changes just in case :)
         _configMonitor.OnChange(newConfig =>
         {
-            _logger.LogInformation("Configuration changed! Enabled: {Enabled}, Blocklist: {Count}",
-                newConfig.IsEnabled, newConfig.BlockedProcesses.Count);
+            _logger.LogInformation("Configuration changed! Enabled: {Enabled}",
+                newConfig.IsEnabled);
         });
         _userRulesService = userRulesService;
     }
@@ -50,12 +50,11 @@ public class Worker : BackgroundService
         while (!stoppingToken.IsCancellationRequested)
         {
             var config = _configMonitor.CurrentValue;
+            var userRules = _userRulesService.LoadRules();
 
             // 🔍 DEBUGGING: Print the state every loop
             /*_logger.LogInformation("DEBUG CHECK: IsEnabled={Enabled}, Count={Count}, FirstItem={First}",
-                config.IsEnabled,
-                config.BlockedProcesses?.Count ?? -1,
-                config.BlockedProcesses?.FirstOrDefault() ?? "NULL");*/
+                config.IsEnabled */
 
             if (!_state.IsEnabled)
             {
@@ -63,25 +62,36 @@ public class Worker : BackgroundService
                 continue;
             }
 
-            var blockList = new HashSet<string>(config.BlockedProcesses ?? new List<string>(), StringComparer.OrdinalIgnoreCase);
-
-            RunCycle(blockList);
+            RunCycle(userRules);
 
             await Task.Delay(5000, stoppingToken);
         }
     }
-    public void RunCycle(HashSet<string> blockList)
+    public void RunCycle(HashSet<string> currentRules)
     {
-        var userApps = _processManager.GetUserApps();
-        foreach (var app in userApps)
+        // 1. Fetch all running apps
+        var runningApps = _processManager.GetUserApps();
+
+        // 2. Filter and Group by Name (The "Go map" equivalent)
+        var violations = runningApps
+            .Where(app => currentRules.Contains(app.ProcessName))
+            .GroupBy(app => app.ProcessName);
+
+        foreach (var group in violations)
         {
-            if (blockList.Contains(app.ProcessName))
-            {
-                _logger.LogInformation("VIOLATION DETECTED: {ProcessName}", app.ProcessName);
-                _processManager.KillProcessByName(app.ProcessName);
-                _state.IncrementKillCount();
-                _state.AddLog($"Killed {app.ProcessName}");
-            }
+            string processName = group.Key;
+            int count = group.Count();
+
+            // 3. Log the summary (One log line instead of many)
+            _logger.LogWarning("VIOLATION: Found {ProcessName} ({Count} instances). Terminating...",
+                processName, count);
+
+            // 4. Perform the Action
+            _processManager.KillProcessByName(processName);
+
+            // 5. Update Shared UI State
+            _state.IncrementKillCount();
+            _state.AddLog($"Terminated {processName} ({count} instances)");
         }
     }
 }

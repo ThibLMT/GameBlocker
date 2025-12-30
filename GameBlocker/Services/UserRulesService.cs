@@ -1,5 +1,6 @@
 ﻿// Services/UserRulesService.cs
 
+using Microsoft.VisualBasic.FileIO;
 using System.Text.Json;
 
 public class UserRulesService
@@ -14,7 +15,10 @@ public class UserRulesService
 
     public UserRulesService()
     {
-        _filePath = Path.Combine(AppContext.BaseDirectory, "user_rules.json");
+        var commonAppDataPath = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
+        var combinedPath = Path.Combine(commonAppDataPath, "GameBlocker");
+        var directory = Directory.CreateDirectory(combinedPath);
+        _filePath = Path.Combine(directory.FullName, "user_rules.json");
     }
 
     // 3. The Load Method

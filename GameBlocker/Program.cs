@@ -5,18 +5,33 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Serilog;
+using Serilog.Events;
 
-// 1. Setup Logging
-Log.Logger = new LoggerConfiguration()
-    .WriteTo.Console()
-    .WriteTo.File("C:\\ProgramData\\GameBlocker\\log.txt", rollingInterval: RollingInterval.Day)
-    .CreateLogger();
+
 
 var options = new WebApplicationOptions
 {
     Args = args,
     ContentRootPath = AppContext.BaseDirectory
 };
+
+var commonPath = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+        "GameBlocker"
+    );
+
+// Define and create the logs subdirectory
+var logDirectory = Path.Combine(commonPath, "logs");
+Directory.CreateDirectory(logDirectory);
+var logFilePath = Path.Combine(logDirectory, "log.txt");
+
+// 1. Setup Logging with the dynamic path
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Information()
+    .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning) // Quiet HTTP logs
+    .WriteTo.Console()
+    .WriteTo.File(logFilePath, rollingInterval: RollingInterval.Day)
+    .CreateLogger();
 
 try
 {
@@ -45,6 +60,13 @@ try
     });
 
     var app = builder.Build();
+
+    app.UseSerilogRequestLogging(options =>
+    {
+        // This template gives you the clean single-line log you want
+        options.MessageTemplate = "HTTP {RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0000} ms";
+    });
+
     app.UseFileServer();
     app.UseCors("AllowReact");
 
@@ -86,6 +108,23 @@ try
             Exes = kvp.Value
         }).ToList();
         return Results.Ok(response);
+    });
+
+    // GET /api/blocklist
+    app.MapGet("/api/blocklist", (UserRulesService userRulesService) =>
+    {
+        var rules = userRulesService.LoadRules();
+        return Results.Ok(new
+        {
+            rules
+        });
+    });
+
+    // POST /api/blocklist
+    app.MapPost("/api/blocklist", (List<string> selectedExes, UserRulesService userRulesService) =>
+    {
+        userRulesService.SaveRules(selectedExes);
+        return Results.Ok(new { message = "User  blocked processes updated" });
     });
 
     // 6. Run on Port 5000

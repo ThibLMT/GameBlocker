@@ -49,7 +49,7 @@ public class ProcessManager : IProcessManager
             try
             {
                 // LOGGING: Replaces Console.WriteLine
-                _logger.LogWarning("Killing prohibited process: {ProcessName} (ID: {Pid})", targetName, p.Id);
+                _logger.LogDebug("Killing prohibited process: {ProcessName} (ID: {Pid})", targetName, p.Id);
 
                 p.Kill();
                 p.WaitForExit();

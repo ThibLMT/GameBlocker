@@ -9,6 +9,5 @@ public class AppConfig
 {
     public bool IsEnabled { get; set; } = true;
 
-    public List<string> BlockedProcesses { get; set; } = new();
 
 }
